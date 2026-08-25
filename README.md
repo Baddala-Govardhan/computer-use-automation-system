@@ -42,12 +42,7 @@ source .venv/bin/activate
 
 pip install -e ".[dev]"
 playwright install chromium
-
-cp .env.example .env
-# edit .env and set GROQ_API_KEY=your-key-here
 ```
-
-Don't commit `.env` - it's gitignored, same as `.venv/`.
 
 ## Start the mock bank
 
