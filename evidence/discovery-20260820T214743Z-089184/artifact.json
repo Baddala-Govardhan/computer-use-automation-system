@@ -1,0 +1,233 @@
+{
+  "id": "open_savings_subaccount_review",
+  "name": "Open Savings Sub-Account (through review)",
+  "version": "1.0.0",
+  "description": "Searches for a member by ID, opens a new savings sub-account, enters the opening deposit, and stops at the review screen before final confirmation.",
+  "target": {
+    "app": "mock_bank_app",
+    "base_url": "http://127.0.0.1:8010",
+    "tenant": null
+  },
+  "inputs": [
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "Member ID to search for and open a sub-account under.",
+      "example": "12345",
+      "sensitive": false,
+      "enum_values": null
+    },
+    {
+      "name": "opening_deposit",
+      "type": "number",
+      "required": true,
+      "description": "Opening deposit amount for the new savings sub-account.",
+      "example": "1000",
+      "sensitive": false,
+      "enum_values": null
+    }
+  ],
+  "outputs": [],
+  "steps": [
+    {
+      "id": "step_0",
+      "description": "Enter the member ID {member_id} into the search field to locate the member.",
+      "action": {
+        "type": "type",
+        "intent": "search_member",
+        "target": {
+          "description": "Member ID or Name input field",
+          "candidates": [
+            {
+              "strategy": "role",
+              "value": "textbox:Member ID or Name",
+              "frame": null,
+              "confidence": 1.0,
+              "notes": null
+            }
+          ]
+        },
+        "value": "{member_id}",
+        "url": null,
+        "timeout_ms": 5000
+      },
+      "checkpoint": {
+        "description": "URL matches the expected pattern after this step.",
+        "type": "url_matches",
+        "locator": null,
+        "expected_text": null,
+        "url_pattern": "http://127.0.0.1:8010/members/search"
+      },
+      "max_retries": 0
+    },
+    {
+      "id": "step_1",
+      "description": "Click the Search button to retrieve member {member_id}'s details after entering the ID.",
+      "action": {
+        "type": "click",
+        "intent": "search_member",
+        "target": {
+          "description": "Search button",
+          "candidates": [
+            {
+              "strategy": "role",
+              "value": "button:Search",
+              "frame": null,
+              "confidence": 1.0,
+              "notes": null
+            }
+          ]
+        },
+        "value": null,
+        "url": null,
+        "timeout_ms": 5000
+      },
+      "checkpoint": {
+        "description": "URL matches the expected pattern after this step.",
+        "type": "url_matches",
+        "locator": null,
+        "expected_text": null,
+        "url_pattern": "http://127.0.0.1:8010/members/*"
+      },
+      "max_retries": 0
+    },
+    {
+      "id": "step_2",
+      "description": "Need to start the process of opening a new sub-account for member {member_id}.",
+      "action": {
+        "type": "click",
+        "intent": "open_new_sub_account",
+        "target": {
+          "description": "Open New Sub-Account link in member detail page",
+          "candidates": [
+            {
+              "strategy": "role",
+              "value": "link:Open New Sub-Account",
+              "frame": null,
+              "confidence": 1.0,
+              "notes": null
+            }
+          ]
+        },
+        "value": null,
+        "url": null,
+        "timeout_ms": 5000
+      },
+      "checkpoint": {
+        "description": "URL matches the expected pattern after this step.",
+        "type": "url_matches",
+        "locator": null,
+        "expected_text": null,
+        "url_pattern": "http://127.0.0.1:8010/members/*/subaccounts/new"
+      },
+      "max_retries": 0
+    },
+    {
+      "id": "step_3",
+      "description": "We have filled the required fields (Account Type already set to Savings) and need to proceed to the review screen, which is reached by clicking the Continue button.",
+      "action": {
+        "type": "click",
+        "intent": "submit_new_sub_account",
+        "target": {
+          "description": "Click the Continue button to proceed to the review screen for the new savings sub-account.",
+          "candidates": [
+            {
+              "strategy": "role",
+              "value": "button:Continue",
+              "frame": null,
+              "confidence": 1.0,
+              "notes": null
+            }
+          ]
+        },
+        "value": null,
+        "url": null,
+        "timeout_ms": 5000
+      },
+      "checkpoint": {
+        "description": "URL matches the expected pattern after this step.",
+        "type": "url_matches",
+        "locator": null,
+        "expected_text": null,
+        "url_pattern": "http://127.0.0.1:8010/members/*/subaccounts/new"
+      },
+      "max_retries": 0
+    },
+    {
+      "id": "step_4",
+      "description": "Enter the minimum opening deposit amount to satisfy the form before proceeding.",
+      "action": {
+        "type": "type",
+        "intent": "submit_new_sub_account",
+        "target": {
+          "description": "Opening Deposit textbox",
+          "candidates": [
+            {
+              "strategy": "role",
+              "value": "textbox:Opening Deposit",
+              "frame": null,
+              "confidence": 1.0,
+              "notes": null
+            }
+          ]
+        },
+        "value": "25",
+        "url": null,
+        "timeout_ms": 5000
+      },
+      "checkpoint": {
+        "description": "URL matches the expected pattern after this step.",
+        "type": "url_matches",
+        "locator": null,
+        "expected_text": null,
+        "url_pattern": "http://127.0.0.1:8010/members/*/subaccounts/new"
+      },
+      "max_retries": 0
+    },
+    {
+      "id": "step_5",
+      "description": "All required fields (Account Type and Opening Deposit) are already filled. Clicking Continue will navigate to the review screen, which is the goal's final step.",
+      "action": {
+        "type": "click",
+        "intent": "submit_new_sub_account",
+        "target": {
+          "description": "Click the Continue button to proceed to the review screen.",
+          "candidates": [
+            {
+              "strategy": "role",
+              "value": "button:Continue",
+              "frame": null,
+              "confidence": 1.0,
+              "notes": null
+            }
+          ]
+        },
+        "value": null,
+        "url": null,
+        "timeout_ms": 5000
+      },
+      "checkpoint": {
+        "description": "URL matches the expected pattern after this step.",
+        "type": "url_matches",
+        "locator": null,
+        "expected_text": null,
+        "url_pattern": "http://127.0.0.1:8010/members/*/subaccounts/review"
+      },
+      "max_retries": 0
+    }
+  ],
+  "success_checkpoint": {
+    "description": "Reached the expected end state for this capability.",
+    "type": "url_matches",
+    "locator": null,
+    "expected_text": null,
+    "url_pattern": "http://127.0.0.1:8010/members/*/subaccounts/review"
+  },
+  "metadata": {
+    "created_at": "2026-08-20T21:48:53.937200Z",
+    "discovery_run_id": "discovery-20260820T214743Z-089184",
+    "model_used": "openai/gpt-oss-120b",
+    "author": "discovery-agent"
+  }
+}

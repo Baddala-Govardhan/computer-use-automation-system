@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block nav_extra %}
+<tr>
+  <td>
+    <!-- Deliberately ambiguous: same accessible name and role as the real
+         "Continue" action in <main> below, distinguishable only by landmark
+         (nav vs main). Clicking this abandons the flow rather than advancing
+         it - a locator that resolves by text alone will pick the wrong one. -->
+    <form method="get" action="{{ url_for('members_search') }}">
+      <button type="submit">Continue</button>
+    </form>
+  </td>
+</tr>
+{% endblock %}
+{% block content %}
+<h2>Review New Sub-Account &mdash; {{ member.name }} ({{ member.id }})</h2>
+<table border="1" cellpadding="3" cellspacing="0">
+  <tr><td>Account Type</td><td>{{ draft.account_type }}</td></tr>
+  <tr><td>Opening Deposit</td><td>${{ '%.2f'|format(draft.opening_deposit) }}</td></tr>
+</table>
+<form method="post" action="{{ url_for('subaccount_review', member_id=member.id) }}">
+  <table>
+    <tr>
+      <td><button type="submit" name="action" value="confirm">Continue</button></td>
+      <td><button type="submit" name="action" value="cancel">Cancel</button></td>
+    </tr>
+  </table>
+</form>
+{% endblock %}

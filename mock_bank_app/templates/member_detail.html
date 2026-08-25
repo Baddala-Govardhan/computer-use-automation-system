@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Member Detail</h2>
+<table border="1" cellpadding="3" cellspacing="0">
+  <tr><td>Member ID</td><td>{{ member.id }}</td></tr>
+  <tr><td>Name</td><td>{{ member.name }}</td></tr>
+  <tr><td>Email</td><td>{{ member.email }}</td></tr>
+  <tr><td>Savings Balance</td><td>${{ '%.2f'|format(member.savings_balance) }}</td></tr>
+  <tr><td>Checking Balance</td><td>${{ '%.2f'|format(member.checking_balance) }}</td></tr>
+</table>
+<p><a href="{{ url_for('subaccount_new', member_id=member.id) }}">Open New Sub-Account</a></p>
+
+{% if trigger_dialog %}
+<script>
+  window.addEventListener("load", function () {
+    window.confirm("Your session will expire in 2 minutes. Continue working?");
+  });
+</script>
+{% endif %}
+{% endblock %}

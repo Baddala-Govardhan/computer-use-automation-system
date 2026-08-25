@@ -1,0 +1,44 @@
+default:
+  risk: review_required
+  requires_human_confirmation: true
+  blocked: false
+
+intents:
+  search_member:
+    risk: safe
+  view_member_detail:
+    risk: safe
+  read_balance:
+    risk: safe
+  open_new_sub_account:
+    risk: safe
+  submit_new_sub_account:
+    risk: safe
+  select_account_type:
+    risk: safe
+  enter_opening_deposit:
+    risk: safe
+  set_opening_deposit:
+    risk: safe
+  review_new_sub_account:
+    risk: safe
+  confirm_new_sub_account:
+    risk: irreversible
+    requires_human_confirmation: true
+  transfer_funds:
+    risk: irreversible
+    requires_human_confirmation: true
+  delete_account:
+    risk: irreversible
+    requires_human_confirmation: true
+    blocked: true
+
+route_risk_rules:
+  - route_pattern: "/members/*/subaccounts/review"
+    action_types: [click]
+    exclude:
+      intents: [cancel_new_sub_account]
+      locator_text: ["cancel", "member search", "log out"]
+    classification:
+      risk: irreversible
+      requires_human_confirmation: true

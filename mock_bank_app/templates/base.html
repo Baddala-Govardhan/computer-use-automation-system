@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head><title>{% block title %}Community Credit Union - Member Servicing{% endblock %}</title></head>
+<body>
+<table border="1" cellpadding="4" cellspacing="0" width="100%">
+  <tr>
+    <td colspan="2"><h1>Community Credit Union &mdash; Member Servicing Console</h1></td>
+  </tr>
+  <tr>
+    <td valign="top" width="160">
+      <nav>
+        <table border="0" cellpadding="2" cellspacing="0">
+          <tr><td><a href="{{ url_for('members_search') }}">Member Search</a></td></tr>
+          {% block nav_extra %}{% endblock %}
+          <tr><td><a href="{{ url_for('logout') }}">Log Out</a></td></tr>
+        </table>
+      </nav>
+    </td>
+    <td valign="top">
+      <main>
+        {% block content %}{% endblock %}
+      </main>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

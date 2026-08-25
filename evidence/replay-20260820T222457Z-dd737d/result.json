@@ -1,0 +1,20 @@
+{
+  "run_id": "replay-20260820T222457Z-dd737d",
+  "status": "hard_failure",
+  "capability_id": "open_savings_subaccount_review",
+  "capability_version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "recoverable_events": [],
+  "failure": {
+    "step_id": "step_1",
+    "expected": "no error/permission condition on the resulting page",
+    "observed": "permission denied - page shows: \"- table: - rowgroup: - row \"System Message You do not have permission to perform this operation.\": - cell \"System Message\"\"",
+    "message": "permission denied - page shows: \"- table: - rowgroup: - row \"System Message You do not have permission to perform this operation.\": - cell \"System Message\"\"",
+    "evidence_ref": {
+      "kind": "screenshot",
+      "path": "screenshots/failure_step_1.png"
+    }
+  },
+  "evidence_ref": null
+}

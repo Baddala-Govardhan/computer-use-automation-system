@@ -1,0 +1,9 @@
+{
+  "run_id": "replay-20260821T021738Z-65eb7c",
+  "run_type": "replay",
+  "target": "http://127.0.0.1:8010",
+  "started_at": "2026-08-21T02:17:38.420605Z",
+  "goal": null,
+  "capability_id": "confirm_new_savings_subaccount",
+  "capability_version": "1.0.0"
+}

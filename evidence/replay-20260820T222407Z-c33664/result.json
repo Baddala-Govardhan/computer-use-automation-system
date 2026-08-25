@@ -1,0 +1,11 @@
+{
+  "run_id": "replay-20260820T222407Z-c33664",
+  "status": "success",
+  "capability_id": "open_savings_subaccount_review",
+  "capability_version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "recoverable_events": [],
+  "failure": null,
+  "evidence_ref": null
+}

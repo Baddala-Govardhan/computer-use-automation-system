@@ -1,0 +1,1 @@
+{"run_id":"discovery-20260820T204749Z-81daf2","seq":1,"timestamp":"2026-08-20T20:47:49.026967Z","type":"run_started","step_id":null,"summary":"goal: Find member 12345, open a new savings sub-account, and stop at the review screen.","data":{"goal":"Find member 12345, open a new savings sub-account, and stop at the review screen.","base_url":"http://127.0.0.1:8010"},"refs":[]}

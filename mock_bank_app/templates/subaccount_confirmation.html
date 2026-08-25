@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Sub-Account Confirmation</h2>
+<table border="1" cellpadding="3" cellspacing="0">
+  <tr><td>Confirmation Number</td><td>{{ confirmation_number }}</td></tr>
+  <tr><td>Member</td><td>{{ member.name }} ({{ member.id }})</td></tr>
+  <tr><td>Account Type</td><td>{{ draft.account_type }}</td></tr>
+  <tr><td>Opening Deposit</td><td>${{ '%.2f'|format(draft.opening_deposit) }}</td></tr>
+</table>
+<p>The new sub-account has been opened successfully.</p>
+{% endblock %}

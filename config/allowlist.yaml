@@ -1,0 +1,26 @@
+allowed_targets:
+  - name: mock_bank_app
+    base_url: "http://localhost:8000"
+    allowed_routes:
+      - "/"
+      - "/login"
+      - "/members"
+      - "/members/*"
+      - "/accounts/*"
+  - name: mock_bank_app_dev_alt_port
+    base_url: "http://127.0.0.1:8010"
+    allowed_routes:
+      - "/"
+      - "/login"
+      - "/members"
+      - "/members/*"
+      - "/accounts/*"
+
+allowed_action_types:
+  - click
+  - type
+  - navigate
+  - extract
+  - wait
+  - select
+  - press_key

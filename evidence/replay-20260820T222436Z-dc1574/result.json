@@ -1,0 +1,18 @@
+{
+  "run_id": "replay-20260820T222436Z-dc1574",
+  "status": "business_outcome",
+  "capability_id": "open_savings_subaccount_review",
+  "capability_version": "1.0.0",
+  "outputs": {},
+  "business_outcome": {
+    "code": "not_found",
+    "message": "The requested record was not found.",
+    "data": {
+      "url": "http://127.0.0.1:8010/members/40400",
+      "context": "- main: - heading \"Member Detail\" [level=2] - text: Member not found - paragraph: No member record exists for ID 40400. - paragr"
+    }
+  },
+  "recoverable_events": [],
+  "failure": null,
+  "evidence_ref": null
+}

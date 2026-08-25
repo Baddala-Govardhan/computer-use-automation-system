@@ -1,0 +1,9 @@
+{
+  "run_id": "discovery-20260820T220546Z-5e2ae7",
+  "run_type": "discovery",
+  "target": "http://127.0.0.1:8010",
+  "started_at": "2026-08-20T22:05:46.695123Z",
+  "goal": "Find member 12345, open a new savings sub-account, and stop at the review screen.",
+  "capability_id": null,
+  "capability_version": null
+}

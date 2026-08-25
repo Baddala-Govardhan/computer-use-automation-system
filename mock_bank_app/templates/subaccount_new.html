@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Open New Sub-Account &mdash; {{ member.name }} ({{ member.id }})</h2>
+<form method="post" action="{{ url_for('subaccount_new', member_id=member.id) }}">
+  <table>
+    <tr>
+      <td><label for="account_type">Account Type</label></td>
+      <td>
+        <select id="account_type" name="account_type">
+          {% for t in account_types %}
+          <option value="{{ t }}" {% if t == form_account_type %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td><label for="opening_deposit">Opening Deposit</label></td>
+      <td>
+        <input type="text" id="opening_deposit" name="opening_deposit" value="{{ form_opening_deposit or '' }}">
+        {% if field_error %}<span class="field-error">{{ field_error }}</span>{% endif %}
+      </td>
+    </tr>
+    <tr><td colspan="2"><button type="submit">Continue</button></td></tr>
+  </table>
+</form>
+<p><a href="{{ url_for('member_detail', member_id=member.id) }}">Cancel</a></p>
+{% endblock %}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head><title>Community Credit Union - Log In</title></head>
+<body>
+<table border="1" cellpadding="4" cellspacing="0">
+  <tr><td><h1>Community Credit Union &mdash; Operator Log In</h1></td></tr>
+  <tr>
+    <td>
+      {% if error %}
+      <div class="error-banner">{{ error }}</div>
+      {% endif %}
+      <form method="post" action="{{ url_for('login') }}">
+        <table>
+          <tr>
+            <td><label for="username">Username</label></td>
+            <td><input type="text" id="username" name="username"></td>
+          </tr>
+          <tr>
+            <td><label for="password">Password</label></td>
+            <td><input type="password" id="password" name="password"></td>
+          </tr>
+          <tr><td colspan="2"><button type="submit">Log In</button></td></tr>
+        </table>
+      </form>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

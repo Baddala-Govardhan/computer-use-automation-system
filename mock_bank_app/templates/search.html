@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Member Search</h2>
+<form method="get" action="{{ url_for('members_search') }}">
+  <table>
+    <tr>
+      <td><label for="q">Member ID or Name</label></td>
+      <td><input type="text" id="q" name="q" value="{{ query or '' }}"></td>
+      <td><button type="submit">Search</button></td>
+    </tr>
+  </table>
+</form>
+
+{% if query %}
+  {% if results %}
+  <table border="1" cellpadding="3" cellspacing="0">
+    <tr><td><b>Member ID</b></td><td><b>Name</b></td><td></td></tr>
+    {% for m in results %}
+    <tr>
+      <td>{{ m.id }}</td>
+      <td>{{ m.name }}</td>
+      <td><a href="{{ url_for('member_detail', member_id=m.id) }}">View</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="error-banner">No members matched "{{ query }}"</div>
+  {% endif %}
+{% endif %}
+{% endblock %}
