@@ -1,12 +1,3 @@
-"""Tests agent/compiler.py in isolation: synthetic RecordedTrace fixtures
-only - no Groq, no Playwright, no browser, no network call anywhere below.
-
-The most important test in this file is
-test_same_compiler_code_reproduces_a_different_member_and_deposit - it's the
-literal claim the assignment makes: a compiled artifact that can only ever
-reproduce member 12345 / deposit 1000 is a recording, not a capability.
-"""
-
 from __future__ import annotations
 
 import json
@@ -42,11 +33,6 @@ def role(value: str, confidence: float = 1.0, extra_css: str | None = None) -> L
 
 
 def build_trace(member_id: str, deposit: str, *, discovery_run_id: str = "discovery-x") -> RecordedTrace:
-    """Builds a trace shaped exactly like the real successful discovery run
-    (type -> click -> click -> type -> click), parameterized by the two
-    values that varied at recording time - this is the ONLY place those
-    literals are chosen; compile_capability() itself never sees "12345" or
-    "1000" as anything but "whatever ParameterSpec.literal_value says"."""
     steps = [
         RecordedStep(
             source_index=0,
@@ -164,12 +150,6 @@ def test_no_literal_invocation_values_survive_anywhere_in_the_artifact():
 
 
 def test_literal_embedded_in_a_locators_own_description_is_also_parameterized():
-    """Regression test: a real discovery run had the model write its own
-    Locator.description as "Click the Search button to find member 12345" -
-    a literal leaking through a field distinct from LocatorCandidate.value
-    or Step.description, which the compiler's first version didn't
-    substitute within. Caught by inspecting a real generated artifact, not
-    by this test - written after the fact so it can't regress silently."""
     trace = build_trace("12345", "1000")
     trace.steps[1] = RecordedStep(
         source_index=trace.steps[1].source_index,
@@ -200,22 +180,14 @@ def test_literal_embedded_in_a_locators_own_description_is_also_parameterized():
 
 
 def test_same_compiler_code_reproduces_a_different_member_and_deposit():
-    """The central claim: compile_capability() contains no reference to
-    12345 or 1000 anywhere in its logic - recompiling a trace recorded with
-    entirely different values produces a structurally identical capability,
-    just with different declared parameter examples. Nothing in
-    agent/compiler.py changes between these two calls."""
     cap_a = compile_bank_example(member_id="12345", deposit="1000")
     cap_b = compile_bank_example(member_id="67890", deposit="2500")
 
-    # Structurally identical: same step count, same intents, same action
-    # types, same locator strategies - only the artifact's own metadata
-    # (created_at) and the underlying literal-that-got-parameterized differ.
     assert len(cap_a.steps) == len(cap_b.steps)
     for step_a, step_b in zip(cap_a.steps, cap_b.steps):
         assert step_a.action.intent == step_b.action.intent
         assert step_a.action.type == step_b.action.type
-        assert step_a.action.value == step_b.action.value  # both "{member_id}" or "{opening_deposit}" or None
+        assert step_a.action.value == step_b.action.value
 
     assert "67890" not in cap_b.model_dump_json()
     assert "2500" not in cap_b.model_dump_json()
@@ -259,9 +231,6 @@ def test_locator_fallback_strategy_is_preserved_through_compilation():
 
 def test_capability_validates_against_the_strict_core_schema():
     capability = compile_bank_example()
-    # Round-tripping through JSON re-validates via Capability's own strict,
-    # extra="forbid" pydantic model - this IS "validate through the existing
-    # strict core schema", not a separate check.
     restored = Capability.model_validate_json(capability.model_dump_json())
     assert restored == capability
 
@@ -275,8 +244,6 @@ def test_irreversible_confirm_action_is_never_part_of_the_bank_example():
 
 def test_compilation_rejects_a_step_requiring_human_confirmation():
     trace = build_trace("12345", "1000")
-    # Simulate a trace that (incorrectly, or from a stale recording) includes
-    # a step whose intent is now classified as irreversible.
     trace.steps.append(
         RecordedStep(
             source_index=5,
@@ -367,7 +334,7 @@ def test_sensitive_parameter_value_never_appears_in_the_serialized_artifact():
 
     pin_param = next(p for p in capability.inputs if p.name == "pin")
     assert pin_param.sensitive is True
-    assert pin_param.example is None  # never auto-populated from literal_value
+    assert pin_param.example is None
     assert "4321" not in capability.model_dump_json()
 
 
@@ -408,10 +375,6 @@ def test_output_definition_is_produced_for_a_declared_extract_step():
 def test_no_groq_or_playwright_specific_data_leaks_into_the_artifact():
     capability = compile_bank_example()
     artifact_json = capability.model_dump_json().lower()
-    # model_used is intentionally recorded (it's honest provenance, not a
-    # leaked implementation detail an artifact shouldn't have) - what must
-    # NOT appear is any SDK/transport-level residue (api keys, request ids,
-    # token usage, raw tool-call JSON).
     assert "api_key" not in artifact_json
     assert "usage" not in artifact_json
     assert "prompt_tokens" not in artifact_json

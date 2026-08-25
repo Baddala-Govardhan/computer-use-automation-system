@@ -1,10 +1,3 @@
-"""Exercises agent/loop.py's control flow end to end - observe -> decide ->
-policy -> act -> log -> checkpoint -> repeat - with no network call and no
-browser. FakeSurface and StubLLMClient are the two seams that make this
-possible; if these tests pass, the loop's logic is right independent of
-whether Groq or Playwright ever get involved.
-"""
-
 from __future__ import annotations
 
 import json
@@ -31,11 +24,6 @@ from agent.loop import DiscoveryResult, StopReason, run_discovery
 
 
 class FakeSurface:
-    """A scripted, in-memory Surface double. observe() replays a fixed list
-    (repeating the last entry once exhausted); act()/take_recoverable_events()
-    replay their own scripted queues, defaulting to a bare success/no-events
-    when the script runs out - most tests only care about a handful of calls."""
-
     def __init__(
         self,
         observations: list[SurfaceObservation],
@@ -76,19 +64,11 @@ class FakeSurface:
 
 
 class RaisingLLMClient:
-    """Simulates a client whose decode/parse step fails outright on every
-    call (e.g. the model returned malformed tool input) - distinct from
-    StubLLMClient, which always hands back an already-valid ActionDecision."""
-
     async def decide(self, context):
         raise ValueError("model returned malformed tool input")
 
 
 class FlakyLLMClient:
-    """Fails with a transient error the first `fail_times` calls, then
-    delegates to `then` - simulates the real, observed Groq behavior where
-    an occasional tool call fails our schema validation but a retry succeeds."""
-
     def __init__(self, fail_times: int, then):
         self._fail_times = fail_times
         self._then = then
@@ -133,10 +113,6 @@ def make_policy(safe: tuple[str, ...] = (), risky: tuple[str, ...] = (), blocked
 
 
 def make_policy_with_review_route_rule() -> PolicyChecker:
-    """Mirrors config/risk_policy.yaml's route_risk_rules entry for the
-    subaccount review screen: `submit_new_sub_account` is declared SAFE by
-    intent (as it genuinely is on /subaccounts/new), but a route rule
-    overrides that on /subaccounts/review regardless of intent name."""
     allowlist = AllowlistConfig(
         allowed_targets=[AllowedTarget(name="t", base_url="http://x", allowed_routes=["*"])],
         allowed_action_types=list(ActionType),
@@ -219,12 +195,7 @@ async def test_stops_at_max_steps_when_model_never_signals_done(tmp_path):
 
 
 async def test_dead_end_stops_when_the_page_never_progresses(tmp_path):
-    """Regression test: a real discovery run typed a literal "$100" into a
-    numeric field, the app rejected it and reloaded the same page, and the
-    model kept re-clicking the same control without correcting anything -
-    same URL, over and over - until it exhausted the Groq rate limit and
-    crashed. This is the deterministic backstop for that."""
-    obs = make_observation()  # always the same URL
+    obs = make_observation()
     action = make_action("search_member")
     surface = FakeSurface(observations=[obs], action_results=[SurfaceActionResult(success=True, observation=obs)] * 5)
     llm = StubLLMClient([ActionDecision(status=DecisionStatus.CONTINUE, reasoning="again", action=action) for _ in range(3)])
@@ -244,22 +215,14 @@ async def test_dead_end_stops_when_the_page_never_progresses(tmp_path):
     assert "no progress" in result.final_reasoning
     assert len(result.steps) == 3
     assert "error_detected" in event_types(logger)
-    # the triggering (4th) observation never reached llm.decide() - dead-end
-    # is detected before spending another decision call, not after.
     assert len(llm.received_contexts) == 3
 
 
 async def test_dead_end_does_not_trigger_on_normal_multi_action_form_filling(tmp_path):
-    """A legitimate multi-field form (type field 1, type field 2, click
-    submit) legitimately stays on the same URL for a few actions before
-    progressing - the threshold must not fire on that normal case."""
     same_page = make_observation(url="http://x/form")
     next_page = make_observation(url="http://x/next")
     action = make_action("search_member")
     surface = FakeSurface(
-        # One entry per iteration's observe() call: still on the form for
-        # the first two (filling two fields), moved on by the third (after
-        # the submit click actually took effect).
         observations=[same_page, same_page, next_page],
         action_results=[
             SurfaceActionResult(success=True, observation=same_page),
@@ -288,12 +251,6 @@ async def test_dead_end_does_not_trigger_on_normal_multi_action_form_filling(tmp
 
 
 async def test_dead_end_does_not_trigger_when_same_url_has_changing_accessibility_state(tmp_path):
-    """The URL alone is not the progress signal - a multi-field form
-    legitimately stays on ONE url while the visible state changes at every
-    step (account type selected, deposit typed, a validation message
-    appears, the field gets corrected). This exceeds the max_dead_end_steps
-    threshold in raw same-URL count, but must NOT trigger DEAD_END because
-    the accessibility tree is genuinely different each time."""
     url = "http://x/subaccounts/new"
     trees = [
         '- combobox "Account Type": Savings',
@@ -322,7 +279,7 @@ async def test_dead_end_does_not_trigger_when_same_url_has_changing_accessibilit
         llm=llm,
         policy=make_policy(safe=("submit_new_sub_account",)),
         evidence=logger,
-        max_dead_end_steps=3,  # same raw same-URL count that DOES trigger in the identical-observation test above
+        max_dead_end_steps=3,
     )
 
     assert result.stop_reason is StopReason.GOAL_COMPLETE
@@ -398,13 +355,6 @@ async def test_action_requiring_confirmation_stops_before_acting(tmp_path):
 
 
 async def test_route_aware_policy_stops_before_acting_even_when_intent_says_safe(tmp_path):
-    """The real safety gap this was built from: a live run had the model
-    reuse the intent `submit_new_sub_account` - SAFE by config, correctly so
-    on /subaccounts/new - for the actual irreversible Review->Confirmation
-    click, and the loop executed it because the policy check only looked at
-    the intent string. With a route-aware rule in place, the loop must stop
-    at CONFIRMATION_REQUIRED and never call surface.act() for that action,
-    regardless of what intent the model attached to it."""
     obs = make_observation(url="http://x/members/12345/subaccounts/review")
     action = make_action("submit_new_sub_account")
     surface = FakeSurface(observations=[obs])
@@ -468,7 +418,6 @@ async def test_decision_retry_recovers_from_a_transient_invalid_output(tmp_path)
     )
 
     assert result.succeeded
-    # step 0: attempt 1 fails, attempt 2 succeeds (search) -> step 1: attempt 1 succeeds (done)
     assert flaky_llm.calls == 3
     assert event_types(logger).count("error_detected") == 1
 

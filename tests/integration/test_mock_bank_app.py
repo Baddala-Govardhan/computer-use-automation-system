@@ -1,8 +1,3 @@
-"""Acceptance checks for the target surface itself, independent of the agent/
-replay code that will later drive it. If these fail, nothing downstream can
-be trusted - the surface is the ground truth for what "correct" looks like.
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -163,8 +158,6 @@ def test_cancel_action_discards_draft_and_returns_to_detail(client):
 def test_dev_reset_clears_session_and_confirmed_subaccounts(client):
     login(client)
     client.post("/members/12345/subaccounts/new", data={"account_type": "Savings", "opening_deposit": "100.00"})
-    # The record isn't created until the confirmation page is actually
-    # rendered (GET /subaccounts/confirmation) - follow the redirect to reach it.
     client.post("/members/12345/subaccounts/review", data={"action": "confirm"}, follow_redirects=True)
     assert len(CONFIRMED_SUBACCOUNTS) == 1
 

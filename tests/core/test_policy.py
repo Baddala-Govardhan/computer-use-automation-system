@@ -101,17 +101,6 @@ def test_real_config_files_load_and_validate():
     assert decision.allowed
 
 
-# --- route-aware risk (config/risk_policy.yaml: route_risk_rules) ---
-#
-# Built directly from a real safety gap found in live testing: the model
-# reused the intent `submit_new_sub_account` - already SAFE for the
-# "reach review" step on /subaccounts/new - for the actual irreversible
-# Review -> Confirmation click, and intent-only classification let it
-# through as safe. These tests exercise the REAL config files, since the
-# fix is a config addition (route_risk_rules), not new PolicyChecker
-# behavior gated behind a test-only fixture.
-
-
 def _real_checker() -> PolicyChecker:
     return PolicyChecker.from_files(REPO_ROOT / "config" / "allowlist.yaml", REPO_ROOT / "config" / "risk_policy.yaml")
 
@@ -124,8 +113,6 @@ def _button_locator(name: str, css: str | None = None) -> Locator:
 
 
 def test_submit_intent_on_subaccounts_new_route_stays_safe():
-    """Safe form progression must be preserved: reaching Review is still an
-    unattended, safe step - the route rule only applies to /subaccounts/review."""
     checker = _real_checker()
     action = Action(type=ActionType.CLICK, intent="submit_new_sub_account", target=_button_locator("Continue"))
     decision = checker.check_action(action, current_url="http://localhost:8000/members/12345/subaccounts/new")
@@ -135,9 +122,6 @@ def test_submit_intent_on_subaccounts_new_route_stays_safe():
 
 
 def test_submit_intent_on_review_route_is_irreversible_regardless_of_intent_name():
-    """The exact real failure: same intent as above, but on the review
-    route, targeting the final Continue/Confirm control - must now require
-    human confirmation even though the intent string alone says 'safe'."""
     checker = _real_checker()
     action = Action(
         type=ActionType.CLICK,
@@ -145,15 +129,12 @@ def test_submit_intent_on_review_route_is_irreversible_regardless_of_intent_name
         target=_button_locator("Continue", css="main form button[value='confirm']"),
     )
     decision = checker.check_action(action, current_url="http://localhost:8000/members/12345/subaccounts/review")
-    assert decision.allowed  # allowed to be escalated, not blocked outright
+    assert decision.allowed
     assert decision.requires_human_confirmation
     assert decision.risk_level is RiskLevel.IRREVERSIBLE
 
 
 def test_confirm_intent_on_review_route_is_irreversible():
-    """The 'expected' intent name for the same action - must resolve
-    identically to the misnamed case above, since the route rule (not the
-    intent lookup) is what's actually doing the work here."""
     checker = _real_checker()
     action = Action(
         type=ActionType.CLICK,
@@ -167,9 +148,6 @@ def test_confirm_intent_on_review_route_is_irreversible():
 
 
 def test_cancel_on_review_route_is_not_misclassified_irreversible():
-    """The route rule must not blanket-classify every click on Review as
-    irreversible - Cancel stays safe even if the model mislabels its intent,
-    because the exclusion is locator-text driven, not intent-name driven."""
     checker = _real_checker()
     action = Action(type=ActionType.CLICK, intent="submit_new_sub_account", target=_button_locator("Cancel"))
     decision = checker.check_action(action, current_url="http://localhost:8000/members/12345/subaccounts/review")
@@ -179,10 +157,6 @@ def test_cancel_on_review_route_is_not_misclassified_irreversible():
 
 
 def test_cancel_intent_is_also_excluded_by_name():
-    """`cancel_new_sub_account` isn't declared SAFE anywhere in `intents`, so
-    it still falls back to the conservative default (review_required) - the
-    point here is narrower: the route rule must not escalate it further to
-    IRREVERSIBLE, which is what exclude.intents is for."""
     checker = _real_checker()
     action = Action(type=ActionType.CLICK, intent="cancel_new_sub_account", target=_button_locator("Cancel"))
     decision = checker.check_action(action, current_url="http://localhost:8000/members/12345/subaccounts/review")
@@ -190,8 +164,6 @@ def test_cancel_intent_is_also_excluded_by_name():
 
 
 def test_navigation_on_review_route_is_not_misclassified_irreversible():
-    """Nav links (Member Search, Log Out) are also clicks on the review
-    route, and must not get swept up by the route rule."""
     checker = _real_checker()
     action = Action(
         type=ActionType.CLICK,

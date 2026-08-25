@@ -1,13 +1,3 @@
-"""Does core.surface.Surface actually survive contact with a real, deliberately
-hostile UI? Runs the real mock_bank_app under a live Flask server and drives
-it with the real PlaywrightSurface + real Chromium - no mocks below core.schema.
-
-Async throughout, matching PlaywrightSurface's async API (required so it can
-run inside the same event loop as agent/loop.py's async LLMClient calls -
-see agent/playwright_surface.py's module docstring for why the sync API
-doesn't work here).
-"""
-
 from __future__ import annotations
 
 import socket
@@ -179,7 +169,7 @@ async def test_unexpected_dialog_is_dismissed_by_default_and_recorded(surface):
     assert surface.take_last_dialog_event() is None
 
     r = await surface.act(Action(type=ActionType.NAVIGATE, intent="navigate", url="/members/40900"))
-    assert r.success, r.error  # the session isn't blocked by the native dialog
+    assert r.success, r.error
 
     event = surface.take_last_dialog_event()
     assert event is not None

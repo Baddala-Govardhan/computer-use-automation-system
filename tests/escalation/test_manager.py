@@ -1,9 +1,3 @@
-"""Tests escalation/manager.py in isolation, plus one integration test
-proving the full chain: replay_capability() refuses to execute a
-confirmation-required action, and EscalationManager takes over the SAME
-surface from there. No Groq, no Playwright, no browser, no network call.
-"""
-
 from __future__ import annotations
 
 import json
@@ -40,11 +34,6 @@ BASE_URL = "http://x"
 
 
 class FakeSurface:
-    """Tracks a single mutable current_url and every action it receives -
-    real enough to prove "the same session" without needing Playwright.
-    `confirmation_number`, when set, is what an EXTRACT action returns -
-    each test picks its own value to prove nothing is hard-coded downstream."""
-
     def __init__(self, starting_url: str = f"{BASE_URL}/review", confirmation_number: str | None = None):
         self._url = starting_url
         self.actions_received: list[Action] = []
@@ -111,9 +100,6 @@ def make_capability() -> Capability:
 
 
 def make_capability_with_confirmation_output() -> Capability:
-    """Same as make_capability(), plus a declared `confirmation_number`
-    output - mirrors scripts/handoff_demo.py's real
-    confirm_new_savings_subaccount capability."""
     base = make_capability()
     return base.model_copy(
         update={
@@ -150,9 +136,6 @@ def confirm_action() -> Action:
     )
 
 
-# --- InterventionRequest content ---------------------------------------------
-
-
 async def test_intervention_request_contains_required_context(tmp_path):
     surface = FakeSurface()
     manager = EscalationManager(surface, make_evidence_logger(tmp_path))
@@ -169,9 +152,6 @@ async def test_intervention_request_contains_required_context(tmp_path):
     assert request.risk_level == "irreversible"
     assert request.screenshot_ref is not None
     assert request.created_at is not None
-
-
-# --- ownership transitions ----------------------------------------------------
 
 
 async def test_raise_intervention_transfers_ownership_to_human(tmp_path):
@@ -195,7 +175,6 @@ async def test_automation_cannot_act_while_human_owns_session(tmp_path):
 async def test_human_action_rejected_before_handoff(tmp_path):
     surface = FakeSurface()
     manager = EscalationManager(surface, make_evidence_logger(tmp_path))
-    # No raise_intervention() called yet - automation still owns the session.
     with pytest.raises(InvalidOwnershipTransition):
         await manager.perform_human_action(confirm_action())
     assert surface.actions_received == []
@@ -216,9 +195,6 @@ async def test_resume_without_prior_handoff_is_rejected(tmp_path):
     manager = EscalationManager(surface, make_evidence_logger(tmp_path))
     with pytest.raises(InvalidOwnershipTransition):
         await manager.resume()
-
-
-# --- human actions -------------------------------------------------------------
 
 
 async def test_human_action_operates_the_existing_session(tmp_path):
@@ -243,9 +219,6 @@ async def test_human_actions_are_recorded_distinctly(tmp_path):
     assert manager.human_actions[0].action.intent == "confirm_new_sub_account"
     assert manager.human_actions[0].success is True
     assert "human_action" in event_types(logger)
-
-
-# --- evidence continuity / same session ---------------------------------------
 
 
 async def test_evidence_stays_associated_with_the_same_run(tmp_path):
@@ -285,9 +258,6 @@ async def test_control_transfer_events_recorded_both_directions(tmp_path):
     assert transfers[1]["data"]["to"] == "automation"
 
 
-# --- verify_and_complete --------------------------------------------------------
-
-
 async def test_verify_and_complete_checks_state_after_resume(tmp_path):
     surface = FakeSurface()
     capability = make_capability()
@@ -298,7 +268,7 @@ async def test_verify_and_complete_checks_state_after_resume(tmp_path):
 
     result = await manager.verify_and_complete(capability)
     assert result.status is OutcomeStatus.SUCCESS
-    assert result.outputs == {}  # make_capability() declares no outputs
+    assert result.outputs == {}
 
 
 async def test_verify_and_complete_requires_automation_ownership(tmp_path):
@@ -306,12 +276,8 @@ async def test_verify_and_complete_requires_automation_ownership(tmp_path):
     capability = make_capability()
     manager = EscalationManager(surface, make_evidence_logger(tmp_path))
     await manager.raise_intervention(capability=capability, step_id="step_0", reason="x")
-    # never resumed - human still owns the session
     with pytest.raises(InvalidOwnershipTransition):
         await manager.verify_and_complete(capability)
-
-
-# --- integration: replay refuses, escalation takes over on the SAME surface ---
 
 
 def make_policy() -> PolicyChecker:
@@ -334,13 +300,12 @@ async def test_replay_refuses_then_escalation_completes_on_the_same_surface(tmp_
     replay_logger = make_evidence_logger(tmp_path / "replay", run_type=RunType.REPLAY)
     replay_result = await replay_capability(capability, {}, surface=surface, policy=policy, evidence=replay_logger)
 
-    # replay refused to execute the irreversible action - nothing happened yet
     assert replay_result.status is OutcomeStatus.ESCALATED
     assert surface.actions_received == []
     assert surface.current_url() == f"{BASE_URL}/review"
 
     escalation_logger = make_evidence_logger(tmp_path / "escalation", run_type=RunType.REPLAY)
-    manager = EscalationManager(surface, escalation_logger)  # SAME surface instance
+    manager = EscalationManager(surface, escalation_logger)
     await manager.raise_intervention(
         capability=capability, step_id=replay_result.failure.step_id, reason=replay_result.failure.message
     )
@@ -352,9 +317,6 @@ async def test_replay_refuses_then_escalation_completes_on_the_same_surface(tmp_
     assert surface.current_url() == f"{BASE_URL}/confirmation"
     assert len(manager.human_actions) == 1
     assert manager.human_actions[0].action.intent == "confirm_new_sub_account"
-
-
-# --- post-handoff verification + output extraction (confirmation_number) -----
 
 
 async def test_human_confirmation_reaches_the_confirmation_page(tmp_path):
@@ -380,19 +342,14 @@ async def test_automation_verifies_checkpoint_extracts_number_and_returns_struct
 
     result = await manager.verify_and_complete(capability)
 
-    # 2. automation independently verified the checkpoint (not just trusted "resume")
     assert result.status is OutcomeStatus.SUCCESS
-    # 3 & 4. the actual extracted value comes back through the structured output contract
     assert result.outputs == {"confirmation_number": "SA-1A2B3C4D"}
     assert result.capability_id == capability.id
     assert result.capability_version == capability.version
-    # 7. still the same surface/session throughout
     assert manager.surface is surface
 
 
 async def test_different_confirmation_numbers_are_extracted_correctly_not_hardcoded(tmp_path):
-    """Two runs, two different runtime-generated numbers - if anything were
-    hard-coded, at least one of these would fail."""
     for expected_number in ("SA-7BDF2140", "SA-00000001"):
         surface = FakeSurface(confirmation_number=expected_number)
         capability = make_capability_with_confirmation_output()
@@ -407,15 +364,11 @@ async def test_different_confirmation_numbers_are_extracted_correctly_not_hardco
 
 
 async def test_resume_without_reaching_confirmation_page_does_not_produce_success(tmp_path):
-    """The human says "resume" but never actually confirmed (e.g. they
-    cancelled, or navigated away) - still on the review page. Automation's
-    independent checkpoint check must catch this, not report SUCCESS just
-    because the human signaled done."""
-    surface = FakeSurface()  # starts and stays on /review - no CLICK performed
+    surface = FakeSurface()
     capability = make_capability_with_confirmation_output()
     manager = EscalationManager(surface, make_evidence_logger(tmp_path))
     await manager.raise_intervention(capability=capability, step_id="step_0", reason="x")
-    await manager.resume(note="human says done")  # no perform_human_action() call at all
+    await manager.resume(note="human says done")
 
     result = await manager.verify_and_complete(capability)
 

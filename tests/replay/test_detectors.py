@@ -34,7 +34,5 @@ def test_clean_page_detects_nothing():
 
 
 def test_permission_denied_takes_priority_over_not_found_wording_collision():
-    # Defensive: if a page somehow mentioned both, permission (hard failure)
-    # should win - it's the more severe condition.
     detection = detect(make_observation("You do not have permission to view this record; it may not be found."))
     assert detection.hard_failure_reason is not None

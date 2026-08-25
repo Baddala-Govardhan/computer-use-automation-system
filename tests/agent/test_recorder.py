@@ -1,7 +1,3 @@
-"""Tests agent/recorder.py in isolation: synthetic DiscoveryResult fixtures
-only - no Groq, no Playwright, no browser, no network call anywhere below.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -164,10 +160,6 @@ def test_recorder_redacts_pii_patterns_from_reasoning():
 
 
 def test_pre_auth_credentials_are_structurally_never_part_of_a_recorded_trace():
-    # Login/pre-authentication (scripts/discover.py's _pre_authenticate) runs
-    # directly against the Surface BEFORE run_discovery is ever called - it
-    # never becomes a DiscoveryStep, so there is nothing for the recorder to
-    # filter out; a real recorded trace can never contain it, by construction.
     steps = [
         make_step(0, make_action("search_member", type_=ActionType.TYPE, value="12345"), "search", observed_url="http://x/1")
     ]

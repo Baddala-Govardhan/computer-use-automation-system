@@ -1,6 +1,3 @@
-"""GroqLLMClient tests. Every groq.AsyncGroq call is mocked - these never
-touch the network and never need a real GROQ_API_KEY."""
-
 from __future__ import annotations
 
 import json
@@ -26,8 +23,6 @@ class _FakeToolCall:
 
 
 class _FakeToolCallRaw:
-    """For arguments that are deliberately not valid JSON."""
-
     def __init__(self, name: str, raw_arguments: str):
         self.function = _FakeFunctionCall(name, raw_arguments)
 
@@ -202,12 +197,6 @@ async def test_decide_raises_on_missing_tool_calls(mock_groq, monkeypatch):
 
 
 async def test_decide_wraps_server_side_schema_validation_failure_as_value_error(mock_groq, monkeypatch):
-    """Groq validates the tool call against our JSON schema server-side and
-    rejects a malformed generation with HTTP 400 (groq.BadRequestError)
-    rather than handing it back to us to parse - observed for real when the
-    model nested "reasoning" inside "action" instead of at the top level.
-    This must surface as a plain ValueError so agent/loop.py's decision-retry
-    path (which only knows about ValidationError/ValueError) can catch it."""
     monkeypatch.setenv("GROQ_API_KEY", "gsk-test")
     import groq
 
@@ -230,7 +219,7 @@ async def test_decide_raises_on_malformed_json_arguments(mock_groq, monkeypatch)
     )
 
     client = GroqLLMClient()
-    with pytest.raises(ValueError):  # json.JSONDecodeError is a ValueError subclass
+    with pytest.raises(ValueError):
         await client.decide(make_context())
 
 

@@ -167,19 +167,10 @@ async def test_console_exits_cleanly_on_eof_without_resuming(tmp_path):
 
     await run_operator_console(manager, input_fn=_raise_eof, print_fn=lambda *a: None)
 
-    # console exited without a `resume` command - ownership is left with the
-    # human, which is the safe default (nobody claimed to have finished)
     assert manager.ownership.owner is Owner.HUMAN
 
 
 async def test_console_click_supports_quoted_css_selector_with_spaces(tmp_path):
-    """Regression test: a real handoff demo run against the live mock bank
-    app used `click role button:Continue` against a page with two
-    identically-labeled Continue buttons (the same landmark-scoped-locator
-    problem the compiled capability itself had to solve) - the click landed
-    ambiguously, because the console's original naive str.split() parser
-    couldn't accept a quoted CSS value containing spaces as a fallback.
-    Fixed with shlex; this locks the fix in."""
     surface = FakeSurface()
     manager = EscalationManager(surface, make_evidence_logger(tmp_path))
     await manager.raise_intervention(capability=make_capability(), step_id="step_0", reason="x")

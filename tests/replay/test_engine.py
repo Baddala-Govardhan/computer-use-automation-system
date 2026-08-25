@@ -1,10 +1,3 @@
-"""Exercises replay/engine.py against every scenario the PDF's replay
-section calls out - synthetic Capability + ScriptedSurface fixtures only.
-No Groq, no Anthropic, no Playwright, no browser, no network call anywhere
-in this file (see test_no_llm_or_browser_imports_anywhere_in_replay for a
-static check that replay/ itself has no such imports either).
-"""
-
 from __future__ import annotations
 
 import json
@@ -39,16 +32,7 @@ from replay.engine import replay_capability
 BASE_URL = "http://x"
 
 
-# --- fixtures / builders -----------------------------------------------------
-
-
 class ScriptedSurface:
-    """A scripted, in-memory Surface double. act() replays a fixed queue of
-    SurfaceActionResults (defaulting to a bare success once exhausted);
-    take_recoverable_events() replays its own queue of event lists. Tracks
-    current_url from each result's observation, exactly like a real Surface
-    would after a navigation."""
-
     def __init__(
         self,
         action_results: list[SurfaceActionResult] | None = None,
@@ -116,9 +100,6 @@ def make_capability(
 
 
 def two_step_capability() -> Capability:
-    """Mirrors the real open_savings_subaccount_review shape: type member_id
-    into search, then click search - success checkpoint on the resulting
-    member page."""
     return make_capability(
         steps=[
             Step(
@@ -172,9 +153,6 @@ def events_by_type(logger: EvidenceLogger, type_: str) -> list[dict]:
     return [json.loads(line) for line in lines if json.loads(line)["type"] == type_]
 
 
-# --- 1 & 2: successful replay + parameter substitution -----------------------
-
-
 async def test_successful_replay_with_different_inputs_than_discovery(tmp_path):
     cap = two_step_capability()
     surface = ScriptedSurface(
@@ -187,8 +165,6 @@ async def test_successful_replay_with_different_inputs_than_discovery(tmp_path):
 
     assert result.status is OutcomeStatus.SUCCESS
     assert result.capability_id == "test_capability"
-    # this is the literal claim: 67890 was never part of discovery/compilation,
-    # yet the same artifact + engine replay it correctly
     assert surface.actions_received[0].value == "67890"
     assert "{member_id}" not in (surface.actions_received[0].value or "")
 
@@ -211,9 +187,6 @@ async def test_parameter_substitution_applies_to_locator_and_value(tmp_path):
     assert sent.target.candidates[0].value == "textbox:Member 999"
 
 
-# --- 3 & 4: locator primary / fallback success --------------------------------
-
-
 async def test_locator_primary_candidate_success(tmp_path):
     cap = two_step_capability()
     surface = ScriptedSurface(
@@ -227,10 +200,6 @@ async def test_locator_primary_candidate_success(tmp_path):
 
 
 async def test_locator_fallback_candidates_are_passed_through_unmodified(tmp_path):
-    """replay/engine.py never narrows or reorders a Locator's candidates -
-    resolution (including which fallback wins) happens inside Surface.act()
-    itself, shared with discovery. This test proves the full ranked chain
-    reaches the surface exactly as recorded."""
     cap = two_step_capability()
     cap.steps[1].action.target = make_locator(
         "Search button",
@@ -251,9 +220,6 @@ async def test_locator_fallback_candidates_are_passed_through_unmodified(tmp_pat
     assert [c.value for c in sent_candidates] == ["button:Search", "main form button[value='confirm']"]
 
 
-# --- 5 & 6: ambiguous / missing locator ---------------------------------------
-
-
 async def test_ambiguous_locator_fails_closed(tmp_path):
     cap = two_step_capability()
     surface = ScriptedSurface(
@@ -266,9 +232,9 @@ async def test_ambiguous_locator_fails_closed(tmp_path):
 
     assert result.status is OutcomeStatus.HARD_FAILURE
     assert result.failure.step_id == "step_1"
-    assert "ambiguous" not in result.failure.expected  # expected describes what SHOULD hold...
+    assert "ambiguous" not in result.failure.expected
     assert "exactly one element" in result.failure.expected
-    assert "ambiguous" in result.failure.observed  # ...observed carries the raw surface error
+    assert "ambiguous" in result.failure.observed
 
 
 async def test_missing_locator_is_a_hard_failure(tmp_path):
@@ -285,15 +251,7 @@ async def test_missing_locator_is_a_hard_failure(tmp_path):
     assert "an element matching" in result.failure.expected
 
 
-# --- 7: final checkpoint mismatch --------------------------------------------
-
-
 async def test_final_checkpoint_mismatch_is_a_hard_failure(tmp_path):
-    # step_1 has no per-step checkpoint of its own here, so this isolates the
-    # FINAL success_checkpoint check specifically (two_step_capability()'s
-    # step_1 checkpoint and success_checkpoint otherwise share the same
-    # pattern, which would attribute a mismatch to the per-step check first -
-    # itself correct behavior, just not what this test is isolating).
     cap = two_step_capability()
     cap.steps[1] = cap.steps[1].model_copy(update={"checkpoint": None})
     surface = ScriptedSurface(
@@ -307,9 +265,6 @@ async def test_final_checkpoint_mismatch_is_a_hard_failure(tmp_path):
     assert result.status is OutcomeStatus.HARD_FAILURE
     assert result.failure.step_id == "final_checkpoint"
     assert result.failure.observed == f"{BASE_URL}/somewhere/unexpected"
-
-
-# --- 8 & 9: business outcome / permission denied ------------------------------
 
 
 async def test_member_not_found_is_a_business_outcome_not_a_crash(tmp_path):
@@ -345,9 +300,6 @@ async def test_permission_denied_is_a_hard_failure_not_a_business_outcome(tmp_pa
     assert "permission" in result.failure.observed.lower()
 
 
-# --- 10: recoverable dialog ---------------------------------------------------
-
-
 async def test_recoverable_dialog_is_logged_and_replay_continues(tmp_path):
     cap = two_step_capability()
     surface = ScriptedSurface(
@@ -365,9 +317,6 @@ async def test_recoverable_dialog_is_logged_and_replay_continues(tmp_path):
     assert result.recoverable_events[0].step_id == "step_1"
 
 
-# --- 11: bounded slow-load retry ----------------------------------------------
-
-
 async def test_transient_timeout_triggers_one_bounded_retry_then_succeeds(tmp_path):
     cap = two_step_capability()
     surface = ScriptedSurface(
@@ -382,7 +331,6 @@ async def test_transient_timeout_triggers_one_bounded_retry_then_succeeds(tmp_pa
     assert result.status is OutcomeStatus.SUCCESS
     assert len(result.recoverable_events) == 1
     assert result.recoverable_events[0].condition == "transient_timeout"
-    # step_1's action was attempted twice: original + retry
     step_1_actions = [a for a in surface.actions_received if a.intent == "search_member" and a.type is ActionType.CLICK]
     assert len(step_1_actions) == 2
     assert step_1_actions[1].timeout_ms > step_1_actions[0].timeout_ms
@@ -400,10 +348,7 @@ async def test_timeout_retry_that_also_fails_is_a_hard_failure(tmp_path):
     result = await replay_capability(cap, {"member_id": "40800"}, surface=surface, policy=make_policy(), evidence=make_evidence_logger(tmp_path))
 
     assert result.status is OutcomeStatus.HARD_FAILURE
-    assert len(result.recoverable_events) == 1  # the attempt is still logged even though it ultimately failed
-
-
-# --- 12 & 13: policy enforcement ----------------------------------------------
+    assert len(result.recoverable_events) == 1
 
 
 async def test_policy_block_stops_replay_immediately(tmp_path):
@@ -416,7 +361,7 @@ async def test_policy_block_stops_replay_immediately(tmp_path):
 
     assert result.status is OutcomeStatus.HARD_FAILURE
     assert "policy" in result.failure.message.lower()
-    assert len(surface.actions_received) == 0  # blocked before the very first action
+    assert len(surface.actions_received) == 0
 
 
 async def test_action_requiring_confirmation_is_escalated_not_executed(tmp_path):
@@ -428,10 +373,7 @@ async def test_action_requiring_confirmation_is_escalated_not_executed(tmp_path)
     result = await replay_capability(cap, {"member_id": "1"}, surface=surface, policy=policy, evidence=make_evidence_logger(tmp_path))
 
     assert result.status is OutcomeStatus.ESCALATED
-    assert len(surface.actions_received) == 0  # the action requiring confirmation was never executed
-
-
-# --- 14: missing/invalid parameters -------------------------------------------
+    assert len(surface.actions_received) == 0
 
 
 async def test_missing_required_parameter_is_a_structured_failure_not_a_crash(tmp_path):
@@ -478,9 +420,6 @@ async def test_invalid_typed_parameter_is_a_structured_failure(tmp_path):
     assert len(surface.actions_received) == 0
 
 
-# --- 15: no LLM/browser imports in replay -------------------------------------
-
-
 def test_no_llm_or_browser_imports_anywhere_in_replay():
     replay_dir = Path(__file__).resolve().parents[2] / "replay"
     banned = ("groq", "anthropic", "playwright")
@@ -489,9 +428,6 @@ def test_no_llm_or_browser_imports_anywhere_in_replay():
         for name in banned:
             assert f"import {name}" not in source, f"{path.name} imports {name}"
             assert f"from {name}" not in source, f"{path.name} imports from {name}"
-
-
-# --- 16: evidence contains step/failure context -------------------------------
 
 
 async def test_evidence_log_contains_step_and_failure_context(tmp_path):
@@ -518,9 +454,6 @@ async def test_evidence_log_contains_step_and_failure_context(tmp_path):
     (failure_screenshot_dir := logger.dir / "screenshots")
     assert failure_screenshot_dir.exists()
     assert any(failure_screenshot_dir.iterdir())
-
-
-# --- outputs -------------------------------------------------------------------
 
 
 async def test_declared_outputs_are_extracted_and_returned(tmp_path):
