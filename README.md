@@ -121,7 +121,7 @@ the recorded steps. No LLM call happens - `replay/engine.py` doesn't import
 an LLM client at all.
 
 ```bash
-PORT=8010 python -m mock_bank_app.app        # separate terminal
+PORT=8010 python -m mock_bank_app.app       
 ```
 
 ```bash
